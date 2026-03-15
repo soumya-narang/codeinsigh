@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codeinsigh — Understand C Code</title>
+  <meta name="description"
+    content="Paste C code, highlight any portion, and get clear explanations. A calm, academic tool for learning C." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css?v=15" />
+</head>
+
+<body>
+
+  <!-- ===== Editor Page (Snap Section) ===== -->
+  <div class="snap-page editor-page">
+    <!-- ===== Header ===== -->
+    <header class="header">
+      <h1 class="header__title">Codeinsigh</h1>
+      <p class="header__subtitle">Confused by code? Highlight it.</p>
+
+      <!-- Playground Snippets dropdown trigger -->
+      <div class="snip-dropdown" id="snip-dropdown">
+        <button class="snip-trigger" id="snip-trigger">Playground Snippets <span class="snip-caret">▾</span></button>
+        <div class="snip-menu" id="snip-menu">
+          <!-- Items injected by snippets.js -->
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== Main ===== -->
+    <main class="main">
+
+      <!-- Editor Card -->
+      <div class="editor-card" id="editor-card">
+        <div class="editor-card__toolbar">
+          <span class="editor-card__lang">C</span>
+          <div class="editor-card__toolbar-right">
+            <span class="editor-card__hint">Select code to analyze</span>
+          </div>
+        </div>
+        <div class="code-area" id="code-area">
+          <div class="line-numbers" id="line-numbers" aria-hidden="true"></div>
+          <div class="code-wrapper">
+            <div class="code-content" id="code-editor" contenteditable="true" spellcheck="false" role="textbox"
+              aria-label="C code editor"></div>
+            <div class="annotation-layer" id="annotation-layer" aria-label="Code annotations"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden Analyze button -->
+      <button class="explain-btn" id="explain-btn" style="display:none !important" aria-hidden="true">Analyze</button>
+
+    </main>
+  </div>
+
+  <!-- ===== About Section ===== -->
+  <section class="snap-page about-section">
+    <div class="about-container">
+      <h2 class="about-title">Understand Code, Not Just Run It</h2>
+      <p class="about-intro">
+        Codeinsigh is designed to help you understand how code works rather than just generate answers.
+        Instead of rewriting prompts to ask an AI for explanations, you can directly explore any part of your code and see how it behaves, executes, and interacts with memory.
+      </p>
+
+      <ul class="about-benefits">
+        <li>Highlight any line of code and instantly explore its behavior</li>
+        <li>Visualize execution through step-by-step simulation</li>
+        <li>See how the computer interprets your program internally</li>
+        <li>Learn programming concepts while exploring real code</li>
+        <li>Understand algorithms rather than memorizing them</li>
+      </ul>
+
+      <h3 class="about-subtitle">How to Use Codeinsigh</h3>
+      <ol class="about-steps">
+        <li>Paste or load a code snippet</li>
+        <li>Highlight the part you want to understand</li>
+        <li>Use Analysis, Simulation, or Computer POV</li>
+        <li>Explore how the program actually behaves</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===== Analysis / Simulation Panel ===== -->
+  <div class="panel-overlay" id="panel-overlay"></div>
+
+  <aside class="explanation-panel" id="explanation-panel" aria-label="Analysis panel">
+    <div class="panel__header">
+      <!-- Tab toggles -->
+      <div class="panel-tabs" id="panel-tabs">
+        <button class="panel-tab panel-tab--active" id="tab-analysis" data-tab="analysis">Analysis</button>
+        <button class="panel-tab" id="tab-simulate" data-tab="simulate">▶ Simulate</button>
+        <button class="panel-tab" id="tab-cpov" data-tab="cpov">⚙ Computer POV</button>
+      </div>
+      <button class="panel__close" id="panel-close" aria-label="Close panel">&times;</button>
+    </div>
+    <pre class="panel__snippet" id="panel-snippet"></pre>
+
+    <!-- Analysis view (default) -->
+    <div class="panel__body panel-view" id="panel-body" data-view="analysis">
+    </div>
+
+    <!-- Simulation view -->
+    <div class="panel-view panel-view--sim" id="sim-view" data-view="simulate" style="display:none">
+      <div class="sim-controls" id="sim-controls">
+        <button class="sim-ctrl-btn" id="sim-prev" title="Previous Step">⏮ Prev</button>
+        <button class="sim-ctrl-btn sim-ctrl-btn--run" id="sim-run" title="Run All">▶ Run</button>
+        <button class="sim-ctrl-btn sim-ctrl-btn--pause" id="sim-pause" title="Pause">⏸ Pause</button>
+        <button class="sim-ctrl-btn" id="sim-next" title="Next Step">⏭ Next</button>
+        <button class="sim-ctrl-btn sim-ctrl-btn--skip" id="sim-skip-loop" title="Skip Loop">⏩ Skip Loop</button>
+      </div>
+      <div class="sim-progress" id="sim-progress">
+        <div class="sim-progress__bar" id="sim-progress-bar"></div>
+      </div>
+      <div class="sim-body" id="sim-body"></div>
+    </div>
+
+    <!-- Computer POV view -->
+    <div class="panel-view panel__body" id="cpov-view" data-view="cpov" style="display:none"></div>
+  </aside>
+
+  <script src="script.js?v=15"></script>
+  <script src="simulator.js?v=11"></script>
+  <script src="computer-pov.js?v=10"></script>
+  <script src="theme.js?v=10"></script>
+  <script src="snippets.js?v=11"></script>
+</body>
+
+</html>

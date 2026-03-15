@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codeinsigh — Understand C Code</title>
+  <meta name="description"
+    content="Paste C code, highlight any portion, and get clear explanations. A calm, academic tool for learning C." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css?v=4" />
+</head>
+
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="header">
+    <h1 class="header__title">Codeinsigh</h1>
+    <p class="header__subtitle">Confused by code? Highlight it.</p>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+
+    <!-- Editor Card -->
+    <div class="editor-card" id="editor-card">
+      <div class="editor-card__toolbar">
+        <span class="editor-card__lang">C</span>
+        <div class="editor-card__toolbar-right">
+          <button class="clear-annotations-btn" id="clear-annotations" aria-label="Clear annotations">Clear
+            notes</button>
+          <span class="editor-card__hint">Select code to analyze</span>
+        </div>
+      </div>
+      <div class="code-area" id="code-area">
+        <div class="line-numbers" id="line-numbers" aria-hidden="true"></div>
+        <div class="code-wrapper">
+          <div class="code-content" id="code-editor" contenteditable="true" spellcheck="false" role="textbox"
+            aria-label="C code editor"></div>
+          <div class="annotation-layer" id="annotation-layer" aria-label="Code annotations"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Analyze Button -->
+    <button class="explain-btn" id="explain-btn" title="Analyze selected code">Analyze</button>
+
+  </main>
+
+  <!-- ===== Explanation Panel ===== -->
+  <div class="panel-overlay" id="panel-overlay"></div>
+
+  <aside class="explanation-panel" id="explanation-panel" aria-label="Analysis panel">
+    <div class="panel__header">
+      <span class="panel__title">Analysis</span>
+      <button class="panel__close" id="panel-close" aria-label="Close panel">&times;</button>
+    </div>
+    <pre class="panel__snippet" id="panel-snippet"></pre>
+    <div class="panel__body" id="panel-body">
+      <!-- Section cards injected by JS -->
+    </div>
+  </aside>
+
+  <script src="script.js?v=5"></script>
+</body>
+
+</html>
