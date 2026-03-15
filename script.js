@@ -192,7 +192,7 @@
     const count = text.split('\n').length || 1;
     lineNumbers.innerHTML = Array.from(
       { length: count },
-      (_, i) => `<span>${i + 1}</span>`
+      (_, i) => `<div class="ln">${i + 1}</div>`
     ).join('');
   }
 
@@ -332,33 +332,66 @@
   //  5.  EXPLANATION PANEL
   // ============================================================
 
-  // -- Placeholder insight data --
-  const PLACEHOLDER_INSIGHT = {
-    role: 'Iterates through an array to find and return the largest element.',
-    concepts: [
-      'Variable initialization',
-      'Array indexing',
-      'Loop traversal',
-      'Conditional comparison',
-      'Return value',
-      'Pointer dereferencing'
-    ],
-    steps: [
-      'Access the first element of the array',
-      'Store it in the variable max as a baseline',
-      'Loop through each remaining element',
-      'Compare current element against max',
-      'Update max if a larger value is found',
-      'Return the final maximum value'
-    ],
-    mistakes: [
-      'Starting the loop at index 0 instead of 1, comparing the element to itself',
-      'Using >= instead of > which doesn\'t cause errors but adds unnecessary updates',
-      'Not checking if the array is empty or size is 0 before accessing arr[0]',
-      'Off-by-one error: using i <= size instead of i < size',
-      'Passing a negative size value, causing undefined behaviour'
-    ]
-  };
+  // -- Dynamic Insight Generator --
+  function analyzeSnippet(code) {
+    const lines = code.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+    if (!lines.length) {
+      return { role: 'Empty sequence.', concepts: ['None'], steps: ['No executable code found.'], mistakes: ['None'] };
+    }
+
+    let role = 'Executes a sequence of C statements.';
+    if (code.includes('for') || code.includes('while')) {
+      role = 'Iterates through elements or repeats operations until a condition is met.';
+    } else if (code.includes('if')) {
+      role = 'Evaluates conditions to branch the flow of execution.';
+    } else if (code.includes('*') || code.includes('&')) {
+      role = 'Manipulates variables and memory addresses directly via pointers.';
+    } else if (code.includes('+') || code.includes('-') || code.includes('/') || code.includes('*')) {
+      role = 'Performs mathematical or logical operations calculations.';
+    }
+
+    const concepts = new Set();
+    if (/(int|float|char|double|long)\s+/.test(code)) concepts.add('Variable declaration');
+    if (code.includes('[')) concepts.add('Array indexing');
+    if (code.includes('for') || code.includes('while')) concepts.add('Loop traversal');
+    if (code.includes('if') || code.includes('else') || code.includes('==') || code.includes('>') || code.includes('<')) concepts.add('Conditional logic');
+    if (code.includes('return')) concepts.add('Function return');
+    if (code.includes('*') || code.includes('&')) concepts.add('Pointers and memory');
+    if (code.includes('printf') || code.includes('scanf')) concepts.add('I/O operations');
+    if (concepts.size === 0) concepts.add('Basic sequential execution');
+
+    const steps = [];
+    const maxSteps = Math.min(lines.length, 6);
+    for (let i = 0; i < maxSteps; i++) {
+      const l = lines[i];
+      if (l.startsWith('if') || l.startsWith('else if')) steps.push('Evaluate condition to determine execution path.');
+      else if (l.startsWith('else')) steps.push('Execute fallback logic if conditions are false.');
+      else if (l.startsWith('for') || l.startsWith('while')) steps.push('Begin repeating structure based on a condition.');
+      else if (l.startsWith('return')) steps.push('Return a calculated value and exit scope.');
+      else if (l.includes('=') && !l.includes('==')) steps.push('Assign or update variable state.');
+      else if (l.includes('printf')) steps.push('Print formatted output to console.');
+      else if (/(int|float|char|double|long)\s+/.test(l)) steps.push('Allocate memory for variable declaration.');
+      else steps.push('Execute standard functional statement.');
+    }
+    if (lines.length > 6) steps.push(`...and ${lines.length - 6} more steps.`);
+
+    const mistakes = new Set();
+    if (code.includes('while')) mistakes.add('Creating an infinite loop if the exit condition is never met.');
+    if (code.includes('[')) mistakes.add('Out-of-bounds array access (indexing beyond allocated size).');
+    if (code.includes('*') || code.includes('&')) mistakes.add('Dereferencing a null pointer, uninitialized pointer, or out-of-scope address.');
+    if (code.includes('/')) mistakes.add('Division by zero resulting in process crash or undefined behavior.');
+    if (/(int|float|char|double)\s+[a-zA-Z_]\w*\s*;/.test(code)) mistakes.add('Using a variable before properly initializing its value.');
+    if (code.includes('=') && !code.includes('==') && code.includes('if')) mistakes.add('Using assignment (=) instead of comparison (==) inside conditional checks.');
+    if (code.includes('for')) mistakes.add('Off-by-one errors in loop boundaries (e.g. using <= instead of <).');
+    if (mistakes.size === 0) mistakes.add('Syntax errors like missing semicolons or mismatched braces.');
+
+    return {
+      role,
+      concepts: Array.from(concepts).slice(0, 6),
+      steps,
+      mistakes: Array.from(mistakes).slice(0, 5)
+    };
+  }
 
   // ============================================================
   //  VARIABLE FLOW — detection, card, highlighting, scroll
@@ -719,27 +752,42 @@
   function buildMemoryViewHTML(memData) {
     if (!memData) return '';
 
-    const varBoxes = memData.variables.map(v => `
-      <div class="mem-cell mem-cell--var" data-mem-name="${escapeHTML(v.name)}">
-        <div class="mem-cell__name">${escapeHTML(v.name)}</div>
-        <div class="mem-cell__row"><span class="mem-cell__key">value:</span> <span class="mem-cell__val">${escapeHTML(v.value)}</span></div>
-        <div class="mem-cell__row"><span class="mem-cell__key">addr:</span> <span class="mem-cell__addr">${v.addr}</span></div>
-      </div>
-    `).join('');
+    function unknownVal() {
+      return '<em class="mem-unknown">&mdash;</em>';
+    }
 
-    const ptrBoxes = memData.pointers.map(p => {
-      const storedAddr = p.targetAddr || '???';
-      const targetLabel = p.target ? ` → ${escapeHTML(p.target)}` : '';
+    function renderCard(name, badge, rows) {
+      const badgeHTML = badge ? ` <span class="mem-cell__ptr-badge">${escapeHTML(badge)}</span>` : '';
+      const rowsHTML = rows.map(r =>
+        `<div class="mem-cell__row"><span class="mem-cell__key">${r.label}</span><span class="${r.cls || 'mem-cell__val'}">${r.value}</span></div>`
+      ).join('');
       return `
-        <div class="mem-cell mem-cell--ptr" data-mem-name="${escapeHTML(p.name)}" data-mem-target="${p.target || ''}">
-          <div class="mem-cell__name">${escapeHTML(p.name)} <span class="mem-cell__ptr-badge">ptr</span></div>
-          <div class="mem-cell__row"><span class="mem-cell__key">stores:</span> <span class="mem-cell__addr">${storedAddr}</span>${targetLabel}</div>
-          <div class="mem-cell__row"><span class="mem-cell__key">addr:</span> <span class="mem-cell__addr">${p.addr}</span></div>
-        </div>
-      `;
+        <div class="mem-cell" data-mem-name="${escapeHTML(name)}">
+          <div class="mem-cell__name">${escapeHTML(name)}${badgeHTML}</div>
+          ${rowsHTML}
+        </div>`;
+    }
+
+    const varCards = memData.variables.map(v => {
+      const typeStr = v.type || 'int';
+      const valStr = (v.value !== undefined && v.value !== null && v.value !== '?') ? escapeHTML(String(v.value)) : unknownVal();
+      return renderCard(v.name, null, [
+        { label: 'type', value: typeStr },
+        { label: 'value', value: valStr },
+        { label: 'addr', value: v.addr || unknownVal(), cls: 'mem-cell__addr' },
+      ]);
     }).join('');
 
-    // Build arrow connections
+    const ptrCards = memData.pointers.map(p => {
+      const storedVal = p.targetAddr || unknownVal();
+      const targetInfo = p.target ? ` → ${escapeHTML(p.target)}` : '';
+      return renderCard(p.name, 'ptr', [
+        { label: 'type', value: 'pointer' },
+        { label: 'stores', value: storedVal + targetInfo, cls: 'mem-cell__addr' },
+        { label: 'addr', value: p.addr || unknownVal(), cls: 'mem-cell__addr' },
+      ]);
+    }).join('');
+
     const arrowsHTML = memData.links.map(link => `
       <div class="mem-arrow" data-from="${escapeHTML(link.from)}" data-to="${escapeHTML(link.to)}">
         <span class="mem-arrow__from">${escapeHTML(link.from)}</span>
@@ -753,8 +801,8 @@
         <div class="insight-card__label">Memory View</div>
         <div class="mem-diagram">
           <div class="mem-cells">
-            ${varBoxes}
-            ${ptrBoxes}
+            ${varCards}
+            ${ptrCards}
           </div>
           ${arrowsHTML ? `<div class="mem-arrows">${arrowsHTML}</div>` : ''}
         </div>
@@ -765,17 +813,19 @@
     panelSnippet.textContent = selectedText;
     window._codeinsighSelectedText = selectedText;
 
+    const insight = analyzeSnippet(selectedText);
+
     const roleHTML = `
       <div class="insight-card insight-card--role">
         <div class="insight-card__label">Quick Role</div>
-        <div class="insight-card__role-text">${PLACEHOLDER_INSIGHT.role}</div>
+        <div class="insight-card__role-text">${insight.role}</div>
       </div>`;
 
     const conceptsHTML = `
       <div class="insight-card insight-card--concepts">
         <div class="insight-card__label">Concepts Detected</div>
         <div class="concept-chips">
-          ${PLACEHOLDER_INSIGHT.concepts.map(c => `<span class="concept-chip">${c}</span>`).join('')}
+          ${insight.concepts.map(c => `<span class="concept-chip">${c}</span>`).join('')}
         </div>
       </div>`;
 
@@ -783,7 +833,7 @@
       <div class="insight-card insight-card--steps">
         <div class="insight-card__label">Execution Steps</div>
         <ol class="step-list">
-          ${PLACEHOLDER_INSIGHT.steps.map(s => `<li class="step-list__item">${s}</li>`).join('')}
+          ${insight.steps.map(s => `<li class="step-list__item">${s}</li>`).join('')}
         </ol>
       </div>`;
 
@@ -791,7 +841,7 @@
       <div class="insight-card insight-card--mistakes">
         <div class="insight-card__label">Possible Mistakes</div>
         <ul class="mistake-list">
-          ${PLACEHOLDER_INSIGHT.mistakes.map(m => `<li class="mistake-list__item">${m}</li>`).join('')}
+          ${insight.mistakes.map(m => `<li class="mistake-list__item">${m}</li>`).join('')}
         </ul>
       </div>`;
 

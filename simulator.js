@@ -18,7 +18,6 @@
   const simNext     = document.getElementById('sim-next');
   const simRun      = document.getElementById('sim-run');
   const simPause    = document.getElementById('sim-pause');
-  const simSkipLoop = document.getElementById('sim-skip-loop');
   const simProgress = document.getElementById('sim-progress-bar');
 
   // ============================================================
@@ -290,7 +289,6 @@
     simCurrent = -1;
     simPause.style.display = 'none';
     simRun.style.display = '';
-    simSkipLoop.style.display = 'none';
     showStep(0);
   }
 
@@ -298,16 +296,6 @@
     if (!simResult) return;
     let html = '';
     for (const s of simResult.steps) {
-      const stateEntries = Object.entries(s.state).map(([k,v]) => {
-        const cls = s.changed.includes(k) ? ' sim-val--changed' : '';
-        return `<span class="sim-val${cls}">${esc(k)} = ${v}</span>`;
-      }).join('');
-      let arrHTML = '';
-      for (const [name, arr] of Object.entries(s.arrs)) {
-        const vals = [];
-        for (let i = 0; i < (arr._len || 0); i++) vals.push(arr[i] ?? 0);
-        if (vals.length) arrHTML += `<span class="sim-val">${esc(name)} = [${vals.join(', ')}]</span>`;
-      }
       html += `
         <div class="sim-step" data-step="${s.n}" id="sim-step-${s.n}">
           <div class="sim-step__head">
@@ -315,19 +303,6 @@
             <code class="sim-step__line">${esc(s.line.trim())}</code>
           </div>
           <div class="sim-step__desc">${esc(s.desc)}</div>
-          <div class="sim-step__state">${stateEntries}${arrHTML}</div>
-        </div>`;
-    }
-    for (const ls of simResult.loopSums) {
-      let updHTML = ls.updates.map(u =>
-        `<div class="sim-loop-upd">Iter ${u.iter} → <b>${esc(u.v)}</b> = ${u.val}</div>`
-      ).join('');
-      html += `
-        <div class="sim-loop-summary">
-          <div class="sim-loop-summary__title">Loop Summary</div>
-          <div class="sim-loop-summary__info">Iterations: ${ls.iters}${ls.iters>=100?' (limit)':''}</div>
-          ${updHTML}
-          <div class="sim-loop-summary__final">Final: ${Object.entries(ls.finalState).map(([k,v])=>`${k}=${v}`).join(', ')}</div>
         </div>`;
     }
     simBody.innerHTML = html;
@@ -342,7 +317,6 @@
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     simProgress.style.width = `${((idx+1)/simResult.steps.length)*100}%`;
     highlightLine(step.li);
-    simSkipLoop.style.display = step.desc.includes('iter') ? '' : 'none';
   }
 
   function highlightLine(lineIdx) {
@@ -383,15 +357,9 @@
     simRunTimer = setInterval(() => {
       if (simResult && simCurrent < simResult.steps.length - 1) showStep(simCurrent + 1);
       else stopSimRun();
-    }, 600);
+    }, 400);
   });
   simPause.addEventListener('click', stopSimRun);
-  simSkipLoop.addEventListener('click', () => {
-    if (!simResult) return;
-    let target = simCurrent + 1;
-    while (target < simResult.steps.length && simResult.steps[target].desc.includes('iter')) target++;
-    showStep(Math.min(target, simResult.steps.length - 1));
-  });
 
   function stopSimRun() {
     clearInterval(simRunTimer); simRunTimer = null;
