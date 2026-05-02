@@ -118,10 +118,10 @@
       if(aD){const nm=aD[1],vals=aD[2].split(',').map(v=>parseInt(v.trim(),10)||0);arrays[nm]={};vals.forEach((v,i)=>{arrays[nm][i]=v;});arrays[nm]._len=vals.length;addStep(li,`${nm} = [${vals.join(', ')}]`,[nm]);return;}
 
       const vD=L.match(/^(?:const\s+)?(?:unsigned\s+|signed\s+)?(?:int|char|float|double|long|short)\s+(\*?\w+)\s*=\s*(.+?)\s*;$/);
-      if(vD&&!L.includes('[')&&!vD[1].includes('[')&&!L.startsWith('return')){const nm=vD[1],val=ev(vD[2]),prev=state[nm];state[nm]=val;addStep(li,`${nm} = ${val}`,prev!==val?[nm]:[]);return;}
+      if(vD&&!L.startsWith('return')){const nm=vD[1],val=ev(vD[2]),prev=state[nm];state[nm]=val;addStep(li,`${nm} = ${val}`,prev!==val?[nm]:[]);return;}
 
       const vDn=L.match(/^(?:int|char|float|double|long|short)\s+(\*?\w+)\s*;$/);
-      if(vDn&&!L.includes('[')&&!L.includes('(')){state[vDn[1]]=0;addStep(li,`${vDn[1]} = 0 (uninitialized)`,[vDn[1]]);return;}
+      if(vDn&&!L.includes('(')){state[vDn[1]]=0;addStep(li,`${vDn[1]} = 0 (uninitialized)`,[vDn[1]]);return;}
 
       const aA=L.match(/^(\w+)\[(.+?)\]\s*=\s*(.+?)\s*;$/);
       if(aA){const nm=aA[1],idx=ev(aA[2]),val=ev(aA[3]);if(!(nm in arrays))arrays[nm]={};arrays[nm][idx]=val;addStep(li,`${nm}[${idx}] = ${val}`,[`${nm}[${idx}]`]);return;}
@@ -264,6 +264,7 @@
   window._simStopRun       = () => stopSimRun();
   window._simClearHighlight = () => clearSimHighlight();
   window._switchTab        = switchTab;
+  window._simulateCode     = simulateCode;
 
   tabAnalysis.addEventListener('click', () => switchTab('analysis'));
   tabSimulate.addEventListener('click', () => switchTab('simulate'));
@@ -357,7 +358,7 @@
     simRunTimer = setInterval(() => {
       if (simResult && simCurrent < simResult.steps.length - 1) showStep(simCurrent + 1);
       else stopSimRun();
-    }, 400);
+    }, 1500);
   });
   simPause.addEventListener('click', stopSimRun);
 

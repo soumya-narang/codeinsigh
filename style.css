@@ -122,6 +122,12 @@ body {
               border-color var(--t) var(--ease);
 }
 
+/* Hide custom cursor when Dive Deeper overlay is open */
+.deep-dive-overlay.active ~ .custom-cursor,
+body:has(.deep-dive-overlay.active) .custom-cursor {
+  display: none !important;
+}
+
 .custom-cursor.is-hovering {
   width: 20px;
   height: 20px;
@@ -380,7 +386,7 @@ body {
 .line-numbers {
   width: 40px;
   min-width: 40px;
-  padding: 1rem 0.6rem 1rem 0;
+  padding: 1rem 0.6rem 6rem 0;
   text-align: right;
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
@@ -389,11 +395,13 @@ body {
   user-select: none;
   position: sticky;
   left: 0;
+  z-index: 10;
   background: var(--surface-alt);
   border-right: 1px solid var(--border);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: max-content;
 }
 
 .line-numbers .ln {
@@ -416,7 +424,7 @@ body {
 .code-wrapper {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden removed to allow horizontal scroll on parent */
 }
 
 .code-content {
@@ -424,16 +432,21 @@ body {
   font-size: 13px;
   line-height: 1.75;
   color: var(--code-text);
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.25rem 6rem 1.25rem;
   outline: none;
   white-space: pre;
-  overflow-x: auto;
   min-height: 100%;
   caret-color: var(--accent);
 }
 
-.code-content ::selection {
-  background: var(--accent-dim);
+.code-content ::selection,
+.code-content *::selection {
+  background-color: #264f69; /* Solid color prevents alpha compositing on nested spans */
+}
+
+[data-theme="light"] .code-content ::selection,
+[data-theme="light"] .code-content *::selection {
+  background-color: #d6c6e3;
 }
 
 .annotation-layer {
@@ -647,6 +660,8 @@ mark.var-highlight {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.85rem 1rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .insight-card__label {
@@ -698,6 +713,18 @@ mark.var-highlight {
   font-size: 0.82rem;
   color: var(--text-body);
   line-height: 1.55;
+}
+
+/* Expandable "more steps" item */
+.step-list__item--more {
+  color: var(--accent);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  font-style: italic;
+}
+.step-list__item--more:hover {
+  opacity: 1;
 }
 
 /* Mistakes */
@@ -762,6 +789,9 @@ mark.var-highlight {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
   color: var(--code-text);
+  overflow-wrap: break-word;
+  word-break: break-all;
+  max-width: 100%;
 }
 
 /* ---------- Memory View ---------- */
@@ -1531,4 +1561,66 @@ mark.var-highlight {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   color: var(--code-text);
+}
+
+/* ========== Mobile / Touch Devices ========== */
+@media (hover: none) and (pointer: coarse) {
+  /* Restore default cursor on touch devices */
+  html, body, .theme-toggle, .snip-trigger,
+  .panel__close, .panel-tab, .clear-annotations-btn,
+  .annotation-bubble__dismiss {
+    cursor: auto;
+  }
+
+  /* Hide custom cursor dot entirely */
+  .custom-cursor { display: none !important; }
+
+  /* Make the editor allow touch text selection */
+  .code-content {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: none;
+  }
+
+  /* Panel: full-width on mobile */
+  .explanation-panel {
+    width: 100vw;
+    border-left: none;
+    border-top: 1px solid var(--border-accent);
+  }
+
+  /* Larger tap targets for panel tabs */
+  .panel-tab {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  .panel__close {
+    font-size: 1.4rem;
+    padding: 0.4rem;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Slightly larger editor text for readability */
+  .code-content {
+    font-size: 14px;
+  }
+
+  /* Hero padding tweak */
+  .hero {
+    padding: 3rem 1rem 1.5rem;
+  }
+
+  .hero__headline {
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+  }
+
+  /* Ensure header doesn't hide behind notches */
+  .header__inner {
+    padding: 0.75rem 1rem;
+  }
 }

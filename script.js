@@ -289,6 +289,7 @@
   // ============================================================
 
   let _autoTriggerTimer = null;
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
   function tryAutoTrigger() {
     // Don't re-trigger if the panel is already open
@@ -315,9 +316,70 @@
     _autoTriggerTimer = setTimeout(openPanel, 400);
   }
 
-  // Trigger analysis when the user finishes selecting (even if they release the mouse slightly outside the editor box)
+  // ---- Mobile: touchend-based trigger ----
+  // On real mobile devices, selectionchange fires too frequently during
+  // keyboard open/viewport resize, causing debounce timers to never fire.
+  // Instead, we use touchend (fires once when finger lifts) with a generous
+  // delay to let the selection fully settle.
+
+  if (isTouchDevice) {
+    let _lastTapTime = 0;
+
+    function checkMobileSelection() {
+      if (panel.classList.contains('open')) return;
+
+      const sel = window.getSelection();
+      const text = sel.toString().trim();
+      if (!text || text.length < 2) return;
+
+      // Verify selection is inside editor
+      let node = sel.anchorNode;
+      let insideEditor = false;
+      while (node) {
+        if (node === editor) { insideEditor = true; break; }
+        node = node.parentNode;
+      }
+      if (!insideEditor) return;
+
+      selectedText = text;
+
+      // Open panel first so it can read the native selection ranges
+      openPanel();
+
+      // Blur to dismiss the keyboard synchronously
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+      editor.blur();
+    }
+
+    // Touchend catches taps and double taps
+    document.addEventListener('touchend', (e) => {
+      // Skip touches on the panel, overlay, or close button
+      if (panel.contains(e.target) || overlay === e.target) return;
+
+      const now = Date.now();
+      if (now - _lastTapTime < 400) {
+        // --- Double-Tap Detected ---
+        if (panel.classList.contains('open')) {
+          e.preventDefault(); // Stop zoom
+          closePanel();
+        } else {
+          // If panel is closed, check if they double-tapped to trigger analysis.
+          // We wait 50ms so the OS can finalize its own native text selection.
+          setTimeout(checkMobileSelection, 50);
+        }
+        _lastTapTime = 0;
+      } else {
+        _lastTapTime = now;
+      }
+    });
+  }
+
+  // Trigger analysis when the user finishes selecting (desktop — mouse)
   document.addEventListener('mouseup', () => {
-    // Only check if there's actually a selection (tryAutoTrigger validates if it's inside the editor)
+    // On pure touch interactions, mouseup may fire synthetically — but
+    // tryAutoTrigger's guards (panel open check, selection length) prevent issues.
     setTimeout(tryAutoTrigger, 80);
   });
 
@@ -361,8 +423,7 @@
     if (concepts.size === 0) concepts.add('Basic sequential execution');
 
     const steps = [];
-    const maxSteps = Math.min(lines.length, 6);
-    for (let i = 0; i < maxSteps; i++) {
+    for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
       if (l.startsWith('if') || l.startsWith('else if')) steps.push('Evaluate condition to determine execution path.');
       else if (l.startsWith('else')) steps.push('Execute fallback logic if conditions are false.');
@@ -373,7 +434,6 @@
       else if (/(int|float|char|double|long)\s+/.test(l)) steps.push('Allocate memory for variable declaration.');
       else steps.push('Execute standard functional statement.');
     }
-    if (lines.length > 6) steps.push(`...and ${lines.length - 6} more steps.`);
 
     const mistakes = new Set();
     if (code.includes('while')) mistakes.add('Creating an infinite loop if the exit condition is never met.');
@@ -829,11 +889,15 @@
         </div>
       </div>`;
 
+    const visibleSteps = insight.steps.slice(0, 6);
+    const hiddenSteps = insight.steps.slice(6);
     const stepsHTML = `
       <div class="insight-card insight-card--steps">
         <div class="insight-card__label">Execution Steps</div>
-        <ol class="step-list">
-          ${insight.steps.map(s => `<li class="step-list__item">${s}</li>`).join('')}
+        <ol class="step-list" id="step-list-ol">
+          ${visibleSteps.map(s => `<li class="step-list__item">${s}</li>`).join('')}
+          ${hiddenSteps.length ? `<li class="step-list__item step-list__item--more" id="step-expand-trigger">Show ${hiddenSteps.length} more steps</li>` : ''}
+          ${hiddenSteps.map(s => `<li class="step-list__item step-list__item--hidden" style="display:none">${s}</li>`).join('')}
         </ol>
       </div>`;
 
@@ -853,7 +917,25 @@
     const memData = detectPointers(selectedText);
     const memoryViewHTML = buildMemoryViewHTML(memData);
 
-    panelBody.innerHTML = roleHTML + conceptsHTML + stepsHTML + mistakesHTML + variableFlowHTML + memoryViewHTML;
+    const diveDeeperHTML = `
+      <div class="insight-card insight-card--dive-deeper" style="border-color: var(--accent-edge); cursor: pointer; transition: all 0.2s ease; margin-top: 1.5rem;" onclick="if(window._openDeepDive) window._openDeepDive()" onmouseover="this.style.background='var(--accent-dim)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.background='transparent'; this.style.borderColor='var(--accent-edge)';">
+        <div class="insight-card__label" style="color: var(--accent); display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-size: 0.95rem; margin-bottom: 0;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Dive Deeper
+        </div>
+      </div>`;
+
+    panelBody.innerHTML = roleHTML + conceptsHTML + stepsHTML + mistakesHTML + variableFlowHTML + memoryViewHTML + diveDeeperHTML;
+
+    // "Show X more steps" — expand on click
+    const expandTrigger = document.getElementById('step-expand-trigger');
+    if (expandTrigger) {
+      expandTrigger.addEventListener('click', function() {
+        const hiddenItems = panelBody.querySelectorAll('.step-list__item--hidden');
+        hiddenItems.forEach(el => { el.style.display = ''; el.classList.remove('step-list__item--hidden'); });
+        this.remove();
+      });
+    }
 
     // Highlight variable occurrences in the editor
     if (detectedVars.length) {

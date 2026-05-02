@@ -1,0 +1,427 @@
+/* ===== Codeinsigh — deep-dive.css (Dive Deeper — Cinematic Causality) ===== */
+
+/* ── Overlay ───────────────────────────────────────────── */
+.deep-dive-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: #0a0a0c;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity .4s ease;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0e0e0;
+  cursor: default;
+}
+.deep-dive-overlay.active {
+  opacity: 1; pointer-events: auto;
+}
+.deep-dive-overlay.active::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none; z-index: 0;
+  animation: gridFadeIn .8s ease-out;
+}
+@keyframes gridFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Scan line on open */
+.deep-dive-overlay.active::after {
+  content: '';
+  position: absolute; left: 0; right: 0;
+  height: 2px; top: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  animation: scanSweep .8s ease-out forwards;
+  pointer-events: none; z-index: 1;
+}
+@keyframes scanSweep {
+  0%   { top: 0; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.dd-header {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.dd-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .9rem; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+}
+.dd-title svg { opacity: .5; }
+.dd-close {
+  background: none; border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.35); border-radius: 4px;
+  padding: 5px 14px; font-size: .72rem; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .05em;
+  transition: all .25s;
+}
+.dd-close:hover { color: rgba(255,255,255,.7); border-color: rgba(255,255,255,.25); }
+
+/* ── Layout ────────────────────────────────────────────── */
+.dd-layout {
+  position: relative; z-index: 1;
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Canvas (Tree / Picker) ────────────────────────────── */
+.dd-pane--canvas {
+  flex: 1; min-height: 0;
+  overflow: auto; padding: 32px 20px;
+  display: flex; justify-content: center;
+}
+.dd-pane--canvas::-webkit-scrollbar { width: 4px; }
+.dd-pane--canvas::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 2px; }
+.dd-canvas-content { width: 100%; max-width: 900px; }
+
+/* ── Controls Bar ──────────────────────────────────────── */
+.dd-controls-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 28px;
+  border-top: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  background: rgba(255,255,255,.015);
+}
+.dd-step-counter {
+  font-size: .7rem; color: rgba(255,255,255,.3);
+}
+.dd-btn {
+  background: none; border: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.35); border-radius: 3px;
+  padding: 5px 12px; font-size: .7rem; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all .2s;
+}
+.dd-btn:hover { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
+
+/* ── Code Pane ─────────────────────────────────────────── */
+.dd-pane--code {
+  flex-shrink: 0; max-height: 180px; overflow: auto;
+  border-top: 1px solid rgba(255,255,255,.04);
+  background: rgba(0,0,0,.5);
+}
+.dd-pane--code::-webkit-scrollbar { width: 4px; }
+.dd-pane--code::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 2px; }
+.dd-code-block {
+  font-size: .78rem; line-height: 1.8;
+  padding: 12px 20px;
+}
+.dd-line {
+  display: flex; gap: 16px; padding: 1px 8px;
+  border-radius: 2px; transition: all .35s ease;
+  border-left: 2px solid transparent;
+}
+.dd-line.active {
+  background: rgba(255,255,255,.04);
+  border-left-color: rgba(255,255,255,.35);
+}
+.dd-line-num {
+  color: rgba(255,255,255,.15); min-width: 20px;
+  text-align: right; user-select: none; font-size: .7rem;
+}
+.dd-line-code { white-space: pre; color: rgba(255,255,255,.55); }
+.dd-line.active .dd-line-code { color: rgba(255,255,255,.85); }
+
+/* ============================================================
+   RESULT PICKER
+   ============================================================ */
+.dd-picker {
+  display: flex; flex-direction: column; align-items: center;
+  animation: pickerReveal .6s ease-out;
+}
+@keyframes pickerReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dd-picker-title {
+  font-size: .75rem; font-weight: 400;
+  color: rgba(255,255,255,.2);
+  letter-spacing: .15em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.dd-picker-sub {
+  font-size: .7rem; color: rgba(255,255,255,.12);
+  margin-bottom: 40px; font-family: 'DM Sans', sans-serif;
+}
+.dd-picker-section {
+  width: 100%; max-width: 500px;
+  margin-bottom: 28px;
+}
+.dd-picker-section-title {
+  font-size: .6rem; color: rgba(255,255,255,.15);
+  letter-spacing: .12em; text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+
+/* ── Result Row ── */
+.dd-result-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer; position: relative;
+  transition: all .25s ease;
+}
+.dd-result-row::after {
+  content: '';
+  position: absolute; bottom: 0; left: 16px; right: 16px;
+  height: 1px; background: rgba(255,255,255,.03);
+}
+.dd-result-row:hover {
+  background: rgba(255,255,255,.025);
+}
+.dd-result-row:hover .dd-result-arrow {
+  opacity: 1; transform: translateX(0);
+}
+.dd-result-row:hover .dd-result-name { color: rgba(255,255,255,.7); }
+.dd-result-row:active { background: rgba(255,255,255,.04); }
+
+/* Ripple effect on click */
+.dd-result-row .dd-ripple {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  transform: scale(0); animation: rippleOut .5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes rippleOut {
+  to { transform: scale(4); opacity: 0; }
+}
+
+.dd-result-name {
+  font-size: .8rem; color: rgba(255,255,255,.4);
+  min-width: 80px; transition: color .2s;
+}
+.dd-result-dots {
+  flex: 1; overflow: hidden;
+  color: rgba(255,255,255,.06);
+  font-size: .6rem; letter-spacing: 3px;
+}
+.dd-result-val {
+  font-size: .9rem; color: rgba(255,255,255,.65);
+  font-weight: 500; min-width: 40px; text-align: right;
+}
+.dd-result-arrow {
+  opacity: 0; transform: translateX(-6px);
+  transition: all .25s ease;
+  color: rgba(255,255,255,.25); font-size: .7rem;
+}
+
+/* Staggered row entry */
+.dd-result-row { animation: rowSlideIn .4s ease-out both; }
+.dd-result-row:nth-child(1) { animation-delay: .05s; }
+.dd-result-row:nth-child(2) { animation-delay: .1s; }
+.dd-result-row:nth-child(3) { animation-delay: .15s; }
+.dd-result-row:nth-child(4) { animation-delay: .2s; }
+.dd-result-row:nth-child(5) { animation-delay: .25s; }
+.dd-result-row:nth-child(6) { animation-delay: .3s; }
+.dd-result-row:nth-child(7) { animation-delay: .35s; }
+.dd-result-row:nth-child(8) { animation-delay: .4s; }
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   CAUSALITY TREE
+   ============================================================ */
+.dd-tree {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0;
+}
+
+/* ── Node ── */
+.dd-node {
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
+}
+
+/* The dot — the anchor point of each node */
+.dd-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  margin-bottom: 10px;
+  position: relative; z-index: 2;
+  animation: dotAppear .3s ease-out;
+}
+@keyframes dotAppear {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* Pulsing ring for expandable nodes */
+.dd-node:not(.is-terminal):not(.is-expanded) .dd-dot::after {
+  content: '';
+  position: absolute; inset: -6px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 50%;
+  animation: pulseRing 2s ease-in-out infinite;
+}
+@keyframes pulseRing {
+  0%, 100% { transform: scale(1); opacity: .5; }
+  50%      { transform: scale(1.6); opacity: 0; }
+}
+
+/* Terminal dot — solid checkmark feel */
+.dd-node.is-terminal .dd-dot {
+  background: rgba(255,255,255,.2);
+  box-shadow: none;
+}
+
+/* ── Node Info ── */
+.dd-node-info {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-bottom: 4px; cursor: pointer;
+  transition: opacity .2s;
+}
+.dd-node:not(.is-terminal) .dd-node-info:hover { opacity: .8; }
+
+.dd-node-name {
+  font-size: .75rem; color: rgba(255,255,255,.35);
+}
+.dd-node-eq {
+  font-size: .65rem; color: rgba(255,255,255,.15);
+}
+.dd-node-val {
+  font-size: 1.1rem; font-weight: 600;
+  color: rgba(255,255,255,.75);
+}
+
+/* ── Node Metadata ── */
+.dd-node-meta {
+  font-size: .6rem; color: rgba(255,255,255,.15);
+  font-family: 'DM Sans', sans-serif;
+  margin-bottom: 4px; text-align: center;
+  max-width: 180px; line-height: 1.4;
+}
+
+/* ── Expand indicator (SVG icon) ── */
+.dd-node-action {
+  cursor: pointer; margin-top: 4px;
+  opacity: .2; transition: opacity .25s, transform .25s;
+}
+.dd-node-action:hover { opacity: .5; transform: scale(1.15); }
+.dd-node-action svg {
+  width: 16px; height: 16px;
+  stroke: rgba(255,255,255,.6); fill: none;
+  stroke-width: 1.5;
+}
+
+/* Terminal badge */
+.dd-node-badge {
+  font-size: .55rem; color: rgba(255,255,255,.2);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.dd-node-badge svg {
+  width: 10px; height: 10px;
+  stroke: rgba(255,255,255,.25); fill: none;
+  stroke-width: 2;
+}
+
+/* ── Children ── */
+.dd-node-children {
+  display: flex; gap: 40px;
+  justify-content: center;
+  padding-top: 40px;
+  position: relative;
+}
+
+/* Vertical connector from parent dot down */
+.dd-node-children::before {
+  content: '';
+  position: absolute; top: 0; left: 50%;
+  width: 1px; height: 40px;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,.06);
+  animation: lineDrawDown .4s ease-out;
+}
+@keyframes lineDrawDown {
+  from { height: 0; }
+  to   { height: 40px; }
+}
+
+/* Traveling dot on vertical connector */
+.dd-node-children::after {
+  content: '';
+  position: absolute; left: 50%;
+  width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  transform: translateX(-50%);
+  animation: travelDown 1.8s ease-in-out infinite;
+}
+@keyframes travelDown {
+  0%   { top: 0; opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { top: 38px; opacity: 0; }
+}
+
+/* Horizontal connector for multiple children */
+.dd-node-children.multi {
+  position: relative;
+}
+.dd-node-children.multi .dd-hline {
+  position: absolute; top: 40px;
+  height: 1px; background: rgba(255,255,255,.06);
+  animation: lineDrawH .5s ease-out .2s both;
+}
+@keyframes lineDrawH {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* Each child's vertical connector stub */
+.dd-child-wrapper {
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
+}
+.dd-child-wrapper::before {
+  content: '';
+  position: absolute; top: -40px; left: 50%;
+  width: 1px; height: 40px;
+  background: rgba(255,255,255,.06);
+  transform: translateX(-50%);
+}
+/* Hide stub for single child (parent line is sufficient) */
+.dd-node-children:not(.multi) .dd-child-wrapper::before { display: none; }
+
+/* ── Node Entry Animation ── */
+.dd-node-enter {
+  animation: nodeBloomIn .45s ease-out both;
+}
+.dd-node-enter:nth-child(2) { animation-delay: .1s; }
+.dd-node-enter:nth-child(3) { animation-delay: .2s; }
+.dd-node-enter:nth-child(4) { animation-delay: .3s; }
+.dd-node-enter:nth-child(5) { animation-delay: .4s; }
+@keyframes nodeBloomIn {
+  from { opacity: 0; transform: translateY(-14px) scale(.85); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Focused node ── */
+.dd-node.is-focused > .dd-dot {
+  background: rgba(255,255,255,.8);
+  box-shadow: 0 0 12px rgba(255,255,255,.15);
+}
+.dd-node.is-focused > .dd-node-info .dd-node-val {
+  color: rgba(255,255,255,.95);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 600px) {
+  .dd-header { padding: 12px 16px; }
+  .dd-pane--canvas { padding: 20px 10px; }
+  .dd-node-children { gap: 16px; flex-wrap: wrap; }
+  .dd-result-row { padding: 8px 10px; }
+  .dd-node-val { font-size: .9rem; }
+}
